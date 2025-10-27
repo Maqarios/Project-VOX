@@ -15,6 +15,7 @@ warnings.filterwarnings("ignore", message=".*compute type.*")
 import json
 import logging
 import re
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -481,6 +482,9 @@ class OutputHandler:
     def save_command(self, command: dict) -> None:
         """Save command to JSON file"""
         try:
+            # Add Unix timestamp
+            command["timestamp"] = int(time.time())
+
             with open(self.output_path, "w", encoding="utf-8") as f:
                 json.dump(command, f, indent=2, ensure_ascii=False)
             logger.info(f"✓ Command saved to {self.output_path}")
