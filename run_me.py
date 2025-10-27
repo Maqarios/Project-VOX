@@ -26,7 +26,7 @@ class Config:
     """Application configuration"""
 
     WAKE_WORD = "hey_jarvis"
-    STT_MODEL = "medium.en"
+    STT_MODEL = "small.en"
     OUTPUT_FILE = "arma_command.json"
 
     # Keypad layout for grid precision upgrade
@@ -91,6 +91,28 @@ class ArtilleryCommandProcessor:
         "niner": "9",
     }
 
+    # Intent patterns - order matters (most specific first)
+    INTENT_PATTERNS = [
+        (
+            r"\blarge\s+smoke\s+(?:mortar\s+)?barrage\b",
+            "call_large_smoke_mortar_barrage",
+        ),
+        (
+            r"\bmedium\s+smoke\s+(?:mortar\s+)?barrage\b",
+            "call_medium_smoke_mortar_barrage",
+        ),
+        (
+            r"\bsmall\s+smoke\s+(?:mortar\s+)?barrage\b",
+            "call_small_smoke_mortar_barrage",
+        ),
+        (r"\bsmoke\s+mortar\s+shell\b", "call_smoke_mortar_shell"),
+        (r"\blarge\s+(?:mortar\s+)?barrage\b", "call_large_mortar_barrage"),
+        (r"\bmedium\s+(?:mortar\s+)?barrage\b", "call_medium_mortar_barrage"),
+        (r"\bsmall\s+(?:mortar\s+)?barrage\b", "call_small_mortar_barrage"),
+        (r"\bmortar\s+shell\b", "call_mortar_shell"),
+        (r"\bartillery\b", "call_artillery"),
+    ]
+
     def process(self, text: str) -> dict:
         """
         Process artillery command and extract grid coordinates
@@ -106,23 +128,47 @@ class ArtilleryCommandProcessor:
         # Convert spoken numbers to digits
         normalized_text = self._convert_words_to_digits(text)
 
+        # Detect intent from command
+        intent = self._detect_intent(normalized_text)
+
         # Extract grid coordinates
         coords = self._extract_and_convert_grid(normalized_text)
 
         if coords is None:
             return {
                 "raw_voice": text,
-                "intent": "call_artillery",
+                "intent": intent,
                 "x": None,
                 "y": None,
             }
 
         return {
             "raw_voice": text,
-            "intent": "call_artillery",
+            "intent": intent,
             "x": coords["x"],
             "y": coords["y"],
         }
+
+    def _detect_intent(self, text: str) -> str:
+        """
+        Detect intent from command text
+
+        Args:
+            text: Normalized command text
+
+        Returns:
+            Intent string (e.g., "call_mortar_shell")
+        """
+        text_lower = text.lower()
+
+        for pattern, intent in self.INTENT_PATTERNS:
+            if re.search(pattern, text_lower, re.IGNORECASE):
+                logger.info(f"✓ Intent detected: {intent}")
+                return intent
+
+        # Default fallback
+        logger.info("✓ Intent detected: call_artillery (default)")
+        return "call_artillery"
 
     def _convert_words_to_digits(self, text: str) -> str:
         """
@@ -347,8 +393,17 @@ def main():
         logger.info(
             f"🎧 Listening for wake word '{Config.WAKE_WORD.replace('_', ' ')}'..."
         )
-        logger.info("Say 'call artillery at grid [coordinates]' after the wake word.")
-        logger.info("Supported MGRS formats (all output as 5x5 + 1 decimal):")
+        logger.info("Supported commands:")
+        logger.info("  - call mortar shell")
+        logger.info("  - call small mortar barrage")
+        logger.info("  - call medium mortar barrage")
+        logger.info("  - call large mortar barrage")
+        logger.info("  - call smoke mortar shell")
+        logger.info("  - call small smoke mortar barrage")
+        logger.info("  - call medium smoke mortar barrage")
+        logger.info("  - call large smoke mortar barrage")
+        logger.info("  - call artillery (default)")
+        logger.info("\nSupported MGRS formats (all output as 5x5 + 1 decimal):")
         logger.info("  Without keypad (defaults to center/keypad 5):")
         logger.info("    - 2x2: 'grid 12 34' -> x=12555.5, y=34555.5")
         logger.info("    - 3x3: 'grid 123 456' -> x=12355.5, y=45655.5")
