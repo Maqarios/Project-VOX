@@ -28,6 +28,7 @@ class Config:
     WAKE_WORD = "hey_jarvis"
     STT_MODEL = "small.en"
     OUTPUT_FILE = "arma_command.json"
+    SETTINGS_FILE = "settings.json"
 
     # Keypad layout for grid precision upgrade
     # 1 2 3
@@ -91,27 +92,101 @@ class ArtilleryCommandProcessor:
         "niner": "9",
     }
 
-    # Intent patterns - order matters (most specific first)
-    INTENT_PATTERNS = [
-        (
-            r"\blarge\s+smoke\s+(?:mortar\s+)?barrage\b",
-            "call_large_smoke_mortar_barrage",
-        ),
-        (
-            r"\bmedium\s+smoke\s+(?:mortar\s+)?barrage\b",
-            "call_medium_smoke_mortar_barrage",
-        ),
-        (
-            r"\bsmall\s+smoke\s+(?:mortar\s+)?barrage\b",
-            "call_small_smoke_mortar_barrage",
-        ),
-        (r"\bsmoke\s+mortar\s+shell\b", "call_smoke_mortar_shell"),
-        (r"\blarge\s+(?:mortar\s+)?barrage\b", "call_large_mortar_barrage"),
-        (r"\bmedium\s+(?:mortar\s+)?barrage\b", "call_medium_mortar_barrage"),
-        (r"\bsmall\s+(?:mortar\s+)?barrage\b", "call_small_mortar_barrage"),
-        (r"\bmortar\s+shell\b", "call_mortar_shell"),
-        (r"\bartillery\b", "call_artillery"),
-    ]
+    def __init__(self):
+        """Initialize processor and load command patterns from settings"""
+        self.INTENT_PATTERNS = self._load_patterns()
+
+    def _load_patterns(self) -> list:
+        """
+        Load command patterns from settings.json
+        Auto-generates patterns from intent names if not provided
+
+        Returns:
+            List of (pattern, intent) tuples
+        """
+        try:
+            settings_path = Path(Config.SETTINGS_FILE)
+            if not settings_path.exists():
+                logger.warning(
+                    f"Settings file not found: {Config.SETTINGS_FILE}, using defaults"
+                )
+                return self._get_default_patterns()
+
+            with open(settings_path, "r") as f:
+                settings = json.load(f)
+
+            patterns = []
+            for cmd in settings.get("commands", []):
+                intent = cmd.get("intent")
+                if not intent:
+                    continue
+
+                pattern = cmd.get("pattern")
+                if not pattern:
+                    # Auto-generate pattern from intent name
+                    pattern = self._generate_pattern_from_intent(intent)
+
+                patterns.append((pattern, intent))
+
+            logger.info(f"✓ Loaded {len(patterns)} command patterns from settings")
+            return patterns
+
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}, using defaults")
+            return self._get_default_patterns()
+
+    def _generate_pattern_from_intent(self, intent: str) -> str:
+        """
+        Auto-generate regex pattern from intent name
+
+        Args:
+            intent: Intent string like "call_large_mortar_barrage"
+
+        Returns:
+            Regex pattern string
+        """
+        # Remove "call_" prefix if present
+        text = intent.replace("call_", "")
+
+        # Replace underscores with spaces
+        text = text.replace("_", " ")
+
+        # Escape special regex characters
+        text = re.escape(text)
+
+        # Add word boundaries
+        pattern = r"\b" + text + r"\b"
+
+        logger.info(f"✓ Auto-generated pattern for '{intent}': {pattern}")
+        return pattern
+
+    def _get_default_patterns(self) -> list:
+        """
+        Get default fallback patterns
+
+        Returns:
+            List of (pattern, intent) tuples
+        """
+        return [
+            (
+                r"\blarge\s+smoke\s+(?:mortar\s+)?barrage\b",
+                "call_large_smoke_mortar_barrage",
+            ),
+            (
+                r"\bmedium\s+smoke\s+(?:mortar\s+)?barrage\b",
+                "call_medium_smoke_mortar_barrage",
+            ),
+            (
+                r"\bsmall\s+smoke\s+(?:mortar\s+)?barrage\b",
+                "call_small_smoke_mortar_barrage",
+            ),
+            (r"\bsmoke\s+mortar\s+shell\b", "call_smoke_mortar_shell"),
+            (r"\blarge\s+(?:mortar\s+)?barrage\b", "call_large_mortar_barrage"),
+            (r"\bmedium\s+(?:mortar\s+)?barrage\b", "call_medium_mortar_barrage"),
+            (r"\bsmall\s+(?:mortar\s+)?barrage\b", "call_small_mortar_barrage"),
+            (r"\bmortar\s+shell\b", "call_mortar_shell"),
+            (r"\bartillery\b", "call_artillery"),
+        ]
 
     def process(self, text: str) -> dict:
         """
@@ -394,15 +469,10 @@ def main():
             f"🎧 Listening for wake word '{Config.WAKE_WORD.replace('_', ' ')}'..."
         )
         logger.info("Supported commands:")
-        logger.info("  - call mortar shell")
-        logger.info("  - call small mortar barrage")
-        logger.info("  - call medium mortar barrage")
-        logger.info("  - call large mortar barrage")
-        logger.info("  - call smoke mortar shell")
-        logger.info("  - call small smoke mortar barrage")
-        logger.info("  - call medium smoke mortar barrage")
-        logger.info("  - call large smoke mortar barrage")
-        logger.info("  - call artillery (default)")
+        for _, intent in processor.INTENT_PATTERNS:
+            # Convert intent to readable format
+            display_name = intent.replace("call_", "").replace("_", " ")
+            logger.info(f"  - {display_name}")
         logger.info("\nSupported MGRS formats (all output as 5x5 + 1 decimal):")
         logger.info("  Without keypad (defaults to center/keypad 5):")
         logger.info("    - 2x2: 'grid 12 34' -> x=12555.5, y=34555.5")
