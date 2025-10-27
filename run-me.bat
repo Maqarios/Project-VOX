@@ -2,7 +2,7 @@
 setlocal
 REM ===========================================================
 REM Install Python via winget (if not already installed)
-REM Then create a venv and install requirements
+REM Then create a venv, install requirements, and run main.py
 REM Run as Administrator
 REM ===========================================================
 
@@ -62,20 +62,36 @@ REM ===========================================================
 
 IF NOT EXIST requirements.txt (
     echo [WARN] requirements.txt not found. Skipping package installation.
-    pause
-    exit /b 0
+) ELSE (
+    echo [INFO] Installing dependencies inside .venv...
+    .venv\Scripts\python.exe -m pip install --upgrade pip
+    .venv\Scripts\python.exe -m pip install -r requirements.txt
+
+    IF %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to install dependencies.
+        pause
+        exit /b 1
+    )
 )
 
-echo [INFO] Installing dependencies inside .venv...
-.venv\Scripts\python.exe -m pip install --upgrade pip
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+REM ===========================================================
+REM Run main.py
+REM ===========================================================
 
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to install dependencies.
+IF NOT EXIST main.py (
+    echo [ERROR] main.py not found in %cd%.
     pause
     exit /b 1
 )
 
-echo [SUCCESS] Python environment setup complete.
+echo [INFO] Running main.py...
+.venv\Scripts\python.exe main.py
+IF %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] main.py exited with errors.
+    pause
+    exit /b 1
+)
+
+echo [SUCCESS] Python environment setup complete and main.py executed successfully.
 pause
 exit /b 0
