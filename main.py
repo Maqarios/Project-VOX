@@ -25,10 +25,60 @@ from RealtimeSTT import AudioToTextRecorder
 class Config:
     """Application configuration"""
 
-    WAKE_WORD = "hey_jarvis"
-    STT_MODEL = "small.en"
-    OUTPUT_FILE = "arma_command.json"
     SETTINGS_FILE = "settings.json"
+    OUTPUT_FILE = "stt_command.json"
+
+    # Default values
+    DEFAULT_WAKE_WORD = "hey_jarvis"
+    DEFAULT_STT_MODEL = "small.en"
+
+    # Load settings
+    _settings = None
+
+    @classmethod
+    def _load_settings(cls):
+        """Load settings from settings.json"""
+        if cls._settings is None:
+            try:
+                settings_path = Path(cls.SETTINGS_FILE)
+                if settings_path.exists():
+                    with open(settings_path, "r") as f:
+                        cls._settings = json.load(f)
+                else:
+                    cls._settings = {}
+            except Exception as e:
+                logger.warning(f"Error loading settings: {e}, using defaults")
+                cls._settings = {}
+        return cls._settings
+
+    @classmethod
+    def get_wake_word(cls) -> str:
+        """Get wake word from settings or default"""
+        settings = cls._load_settings()
+        return settings.get("wake_word", cls.DEFAULT_WAKE_WORD)
+
+    @classmethod
+    def get_stt_model(cls) -> str:
+        """Get STT model from settings or default"""
+        settings = cls._load_settings()
+        return settings.get("stt_model", cls.DEFAULT_STT_MODEL)
+
+    @classmethod
+    def get_profile_path(cls) -> str:
+        """Get full profile file path from settings or default"""
+        settings = cls._load_settings()
+        profile_dir = settings.get("profile_directory", "")
+
+        if profile_dir and profile_dir.strip():
+            # Expand environment variables and user home directory
+            profile_dir = os.path.expandvars(profile_dir)
+            profile_dir = os.path.expanduser(profile_dir)
+            # Create directory if it doesn't exist
+            Path(profile_dir).mkdir(parents=True, exist_ok=True)
+            return str(Path(profile_dir) / cls.OUTPUT_FILE)
+        else:
+            # Use current directory
+            return cls.OUTPUT_FILE
 
     # Keypad layout for grid precision upgrade
     # 1 2 3
@@ -170,22 +220,21 @@ class ArtilleryCommandProcessor:
         return [
             (
                 r"\blarge\s+smoke\s+(?:mortar\s+)?barrage\b",
-                "call_large_smoke_mortar_barrage",
+                "large_smoke_mortar_barrage",
             ),
             (
                 r"\bmedium\s+smoke\s+(?:mortar\s+)?barrage\b",
-                "call_medium_smoke_mortar_barrage",
+                "medium_smoke_mortar_barrage",
             ),
             (
                 r"\bsmall\s+smoke\s+(?:mortar\s+)?barrage\b",
-                "call_small_smoke_mortar_barrage",
+                "small_smoke_mortar_barrage",
             ),
-            (r"\bsmoke\s+mortar\s+shell\b", "call_smoke_mortar_shell"),
-            (r"\blarge\s+(?:mortar\s+)?barrage\b", "call_large_mortar_barrage"),
-            (r"\bmedium\s+(?:mortar\s+)?barrage\b", "call_medium_mortar_barrage"),
-            (r"\bsmall\s+(?:mortar\s+)?barrage\b", "call_small_mortar_barrage"),
-            (r"\bmortar\s+shell\b", "call_mortar_shell"),
-            (r"\bartillery\b", "call_artillery"),
+            (r"\bsmoke\s+mortar\s+shell\b", "smoke_mortar_shell"),
+            (r"\blarge\s+(?:mortar\s+)?barrage\b", "large_mortar_barrage"),
+            (r"\bmedium\s+(?:mortar\s+)?barrage\b", "medium_mortar_barrage"),
+            (r"\bsmall\s+(?:mortar\s+)?barrage\b", "small_mortar_barrage"),
+            (r"\bmortar\s+shell\b", "mortar_shell"),
         ]
 
     def process(self, text: str) -> dict:
@@ -209,22 +258,14 @@ class ArtilleryCommandProcessor:
         # Extract grid coordinates
         coords = self._extract_and_convert_grid(normalized_text)
 
-        if coords is None:
-            return {
-                "raw_voice": text,
-                "intent": intent,
-                "x": None,
-                "y": None,
-            }
-
         return {
             "raw_voice": text,
             "intent": intent,
-            "x": coords["x"],
-            "y": coords["y"],
+            "x": coords["x"] if coords else None,
+            "y": coords["y"] if coords else None,
         }
 
-    def _detect_intent(self, text: str) -> str:
+    def _detect_intent(self, text: str) -> Optional[str]:
         """
         Detect intent from command text
 
@@ -232,7 +273,7 @@ class ArtilleryCommandProcessor:
             text: Normalized command text
 
         Returns:
-            Intent string (e.g., "call_mortar_shell")
+            Intent string (e.g., "call_mortar_shell") or None if not found
         """
         text_lower = text.lower()
 
@@ -241,9 +282,9 @@ class ArtilleryCommandProcessor:
                 logger.info(f"✓ Intent detected: {intent}")
                 return intent
 
-        # Default fallback
-        logger.info("✓ Intent detected: call_artillery (default)")
-        return "call_artillery"
+        # No intent matched
+        logger.warning("No matching intent found in command")
+        return None
 
     def _convert_words_to_digits(self, text: str) -> str:
         """
@@ -454,20 +495,25 @@ def main():
         logger.info("Initializing Arma Reforger Command Processor...")
 
         processor = ArtilleryCommandProcessor()
-        output_handler = OutputHandler(Config.OUTPUT_FILE)
+        output_path = Config.get_profile_path()
+        output_handler = OutputHandler(output_path)
 
+        wake_word = Config.get_wake_word()
+        stt_model = Config.get_stt_model()
+
+        logger.info(f"Using wake word: '{wake_word}'")
+        logger.info(f"Using STT model: '{stt_model}'")
+        logger.info(f"Output file: '{output_path}'")
         logger.info("Starting audio recorder...")
         recorder = AudioToTextRecorder(
-            model=Config.STT_MODEL,
-            wake_words=Config.WAKE_WORD,
+            model=stt_model,
+            wake_words=wake_word,
             wakeword_backend="openwakeword",
             language="en",
             compute_type="int8",
         )
 
-        logger.info(
-            f"🎧 Listening for wake word '{Config.WAKE_WORD.replace('_', ' ')}'..."
-        )
+        logger.info(f"🎧 Listening for wake word '{wake_word.replace('_', ' ')}'...")
         logger.info("Supported commands:")
         for _, intent in processor.INTENT_PATTERNS:
             # Convert intent to readable format
@@ -505,6 +551,11 @@ def main():
 
             # Process command
             command = processor.process(text)
+
+            # Check if intent was detected
+            if command["intent"] is None:
+                logger.error("❌ Failed to detect valid command intent")
+                continue
 
             # Check if grid was extracted
             if command["x"] is None or command["y"] is None:
