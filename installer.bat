@@ -74,24 +74,6 @@ IF NOT EXIST requirements.txt (
     )
 )
 
-REM ===========================================================
-REM Run main.py
-REM ===========================================================
-
-IF NOT EXIST main.py (
-    echo [ERROR] main.py not found in %cd%.
-    pause
-    exit /b 1
-)
-
-echo [INFO] Running main.py...
-.venv\Scripts\python.exe main.py
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] main.py exited with errors.
-    pause
-    exit /b 1
-)
-
-echo [SUCCESS] Python environment setup complete and main.py executed successfully.
+echo [SUCCESS] Python environment setup complete.
 pause
 exit /b 0
