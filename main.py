@@ -398,7 +398,7 @@ class ArtilleryCommandProcessor:
         - Convert input digits to base meter value (e.g., "12" -> 12000m)
         - Determine grid square size based on precision
         - Apply keypad offset within the grid square
-        - Format as 5 digits + 1 decimal place
+        - Return as float with 1 decimal place precision
 
         Grid square sizes:
         - 2-digit: 1000m × 1000m
@@ -415,7 +415,7 @@ class ArtilleryCommandProcessor:
             keypad_match: Regex match object for keypad number, or None
 
         Returns:
-            Tuple of (x_coord, y_coord) as strings in format "XXXXX.X"
+            Tuple of (x_coord, y_coord) as floats rounded to 1 decimal place
         """
         # Default to keypad 5 (center) if no keypad specified
         if keypad_match:
@@ -460,9 +460,9 @@ class ArtilleryCommandProcessor:
         final_e = base_e + offset_meters_e
         final_n = base_n + offset_meters_n
 
-        # Format as string with 1 decimal place
-        x_coord = f"{final_e:.1f}"
-        y_coord = f"{final_n:.1f}"
+        # Round to 1 decimal place and return as float
+        x_coord = round(final_e, 1)
+        y_coord = round(final_n, 1)
 
         if keypad_match:
             logger.info(f"  → Keypad {keypad} positioning: {x_coord}, {y_coord}")
