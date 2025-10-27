@@ -376,7 +376,7 @@ class OutputHandler:
 def main():
     """Main application entry point"""
     try:
-        logger.info("Initializing Artillery Command Processor...")
+        logger.info("Initializing Arma Reforger Command Processor...")
 
         processor = ArtilleryCommandProcessor()
         output_handler = OutputHandler(Config.OUTPUT_FILE)
