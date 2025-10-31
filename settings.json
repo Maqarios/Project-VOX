@@ -20,19 +20,19 @@
             "pattern": "\\blarge\\s+(?:mortar\\s+)?barrage\\b"
         },
         {
-            "intent": "smoke_mortar_shell",
+            "intent": "smoke_shell",
             "pattern": "\\bsmoke\\s+mortar\\s+shell\\b"
         },
         {
-            "intent": "small_smoke_mortar_barrage",
+            "intent": "small_smoke_barrage",
             "pattern": "\\bsmall\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
         },
         {
-            "intent": "medium_smoke_mortar_barrage",
+            "intent": "medium_smoke_barrage",
             "pattern": "\\bmedium\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
         },
         {
-            "intent": "large_smoke_mortar_barrage",
+            "intent": "large_smoke_barrage",
             "pattern": "\\blarge\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
         }
     ]
