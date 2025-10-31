@@ -4,36 +4,36 @@
     "profile_directory": "C:\\Users\\YourName\\Documents\\My Games\\ArmaReforger\\profile",
     "commands": [
         {
-            "intent": "large_smoke_mortar_barrage",
-            "pattern": "\\blarge\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
-        },
-        {
-            "intent": "medium_smoke_mortar_barrage",
-            "pattern": "\\bmedium\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
-        },
-        {
-            "intent": "small_smoke_mortar_barrage",
-            "pattern": "\\bsmall\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
-        },
-        {
-            "intent": "smoke_mortar_shell",
-            "pattern": "\\bsmoke\\s+mortar\\s+shell\\b"
-        },
-        {
-            "intent": "large_mortar_barrage",
-            "pattern": "\\blarge\\s+(?:mortar\\s+)?barrage\\b"
-        },
-        {
-            "intent": "medium_mortar_barrage",
-            "pattern": "\\bmedium\\s+(?:mortar\\s+)?barrage\\b"
+            "intent": "mortar_shell",
+            "pattern": "\\bmortar\\s+shell\\b"
         },
         {
             "intent": "small_mortar_barrage",
             "pattern": "\\bsmall\\s+(?:mortar\\s+)?barrage\\b"
         },
         {
-            "intent": "mortar_shell",
-            "pattern": "\\bmortar\\s+shell\\b"
+            "intent": "medium_mortar_barrage",
+            "pattern": "\\bmedium\\s+(?:mortar\\s+)?barrage\\b"
+        },
+        {
+            "intent": "large_mortar_barrage",
+            "pattern": "\\blarge\\s+(?:mortar\\s+)?barrage\\b"
+        },
+        {
+            "intent": "smoke_mortar_shell",
+            "pattern": "\\bsmoke\\s+mortar\\s+shell\\b"
+        },
+        {
+            "intent": "small_smoke_mortar_barrage",
+            "pattern": "\\bsmall\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
+        },
+        {
+            "intent": "medium_smoke_mortar_barrage",
+            "pattern": "\\bmedium\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
+        },
+        {
+            "intent": "large_smoke_mortar_barrage",
+            "pattern": "\\blarge\\s+smoke\\s+(?:mortar\\s+)?barrage\\b"
         }
     ]
 }
