@@ -27,7 +27,7 @@ class Config:
     """Application configuration"""
 
     SETTINGS_FILE = "settings.json"
-    OUTPUT_FILE = "stt_command.json"
+    OUTPUT_FILE = "vox_command.json"
 
     # Default values
     DEFAULT_WAKE_WORD = "hey_jarvis"
@@ -246,7 +246,7 @@ class ArtilleryCommandProcessor:
             text: Voice command text
 
         Returns:
-            Dictionary with raw_voice, intent, x, and y coordinates
+            Dictionary with raw, status_code, reason_phrase, intent, x, y coordinates
         """
         text = text.strip()
 
@@ -259,8 +259,21 @@ class ArtilleryCommandProcessor:
         # Extract grid coordinates
         coords = self._extract_and_convert_grid(normalized_text)
 
+        # Determine status code and reason phrase
+        if intent is None:
+            status_code = 400
+            reason_phrase = "Bad Request - Invalid command intent"
+        elif coords is None or coords["x"] is None or coords["y"] is None:
+            status_code = 400
+            reason_phrase = "Bad Request - Invalid or missing grid coordinates"
+        else:
+            status_code = 200
+            reason_phrase = "OK"
+
         return {
-            "raw_voice": text,
+            "raw": text,
+            "status_code": status_code,
+            "reason_phrase": reason_phrase,
             "intent": intent,
             "x": coords["x"] if coords else None,
             "y": coords["y"] if coords else None,
@@ -556,21 +569,21 @@ def main():
             # Process command
             command = processor.process(text)
 
-            # Check if intent was detected
-            if command["intent"] is None:
-                logger.error("❌ Failed to detect valid command intent")
-                continue
-
-            # Check if grid was extracted
-            if command["x"] is None or command["y"] is None:
-                logger.error("❌ Failed to extract valid grid coordinates")
-                continue
-
-            # Save and display results
+            # Save output to file regardless of status
             output_handler.save_command(command)
 
-            logger.info(f"📋 Intent: {command['intent']}")
-            logger.info(f"📍 Coordinates: x={command['x']}, y={command['y']}")
+            # Log the results
+            if command["status_code"] == 200:
+                logger.info(f"✓ {command['status_code']} {command['reason_phrase']}")
+                logger.info(f"📋 Intent: {command['intent']}")
+                logger.info(f"📍 Coordinates: x={command['x']}, y={command['y']}")
+            else:
+                logger.error(f"❌ {command['status_code']} {command['reason_phrase']}")
+                if command["intent"]:
+                    logger.info(f"📋 Intent: {command['intent']}")
+                if command["x"] or command["y"]:
+                    logger.info(f"📍 Coordinates: x={command['x']}, y={command['y']}")
+            
             print()  # Empty line for readability
 
     except KeyboardInterrupt:
